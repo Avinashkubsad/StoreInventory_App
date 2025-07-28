@@ -18,12 +18,12 @@
          <q-item
             clickable
             v-ripple
-            to="/inventory"
+            to="/items"
           >
             <q-item-section avatar>
               <q-icon name="storefront" />
             </q-item-section>
-            <q-item-section>Inventory</q-item-section>
+            <q-item-section>Items</q-item-section>
           </q-item>
            <q-item
             clickable
