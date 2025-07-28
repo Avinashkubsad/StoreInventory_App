@@ -101,7 +101,7 @@ export default {
       this.router.push('/cart')
     },
     goBack() {
-      this.cartStore.clearCart() //final check this
+      //this.cartStore.clearCart() //final check this
       this.router.push('/')
     },
     addToCart(product) {
