@@ -21,8 +21,10 @@ CREATE TABLE customers (
 
 CREATE TABLE purchases (
   id SERIAL PRIMARY KEY,
-  customer_id INTEGER REFERENCES customers(id),
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  customer_name TEXT,
+  customer_email TEXT,
+  customer_phone TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
 );
 
 CREATE TABLE purchase_details (
