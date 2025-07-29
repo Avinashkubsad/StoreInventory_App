@@ -1,131 +1,148 @@
 <template>
-  <q-page class="q-pa-md">
-    <div class="row q-col-gutter-md">
-      <div
-        v-for="(product, index) in products"
-        :key="index"
-        :id="`item-${product.name}`"
-        class="col-12 col-sm-6 col-md-4"
-      >
-        <q-card flat bordered class="q-mb-md">
-          <q-card-section>
-            <div class="row items-center justify-between">
-              <div class="text-h6">{{ product.name }}</div>
-              <div class="text-subtitle2">₹{{ product.price }}</div>
-            </div>
-          </q-card-section>
+  <q-page padding>
+    <q-card>
+      <q-card-section>
+        <div class="text-h6">Item List</div>
+      </q-card-section>
 
-          <q-card-actions align="right">
-            <q-btn
-              v-if="!product.added"
-              label="Add to Cart"
-              color="primary"
-              @click="addToCart(product)"
-            />
-          </q-card-actions>
+      <!-- Customer Info -->
+      <q-card-section>
+        <q-input v-model="customer.name" label="Name" class="q-mb-sm" :rules="[val => !!val || 'Name is required']" />
+        <q-input v-model="customer.email" label="Email" class="q-mb-sm" :rules="[val => /.+@.+\..+/.test(val) || 'Valid email required']" />
+        <q-input v-model="customer.phone" label="Phone" class="q-mb-sm" :rules="[val => /^\d{10}$/.test(val) || '10-digit phone required']" />
+      </q-card-section>
 
-          <q-card-section
-            v-if="product.added"
-            class="row items-center justify-between q-px-md q-pb-md"
-          >
-            <div class="text-body2">Quantity:</div>
-            <div class="row items-center">
-              <q-btn flat round dense icon="remove" @click="decreaseQty(product)" />
-              <div class="q-mx-md">{{ product.quantity }}</div>
-              <q-btn flat round dense icon="add" @click="increaseQty(product)" />
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-    </div>
+      <!-- Item Table -->
+      <q-card-section>
+        <q-table
+          :rows="items"
+          :columns="columns"
+          row-key="id"
+        >
+          <template v-slot:body-cell-action="props">
+            <q-td>
+              <q-input
+                type="number"
+                v-model.number="quantities[props.row.id]"
+                :min="1"
+                dense
+                style="width: 60px"
+                @keydown.stop
+              />
+              <q-btn label="Add" color="primary" dense @click="addToCart(props.row)" class="q-ml-sm" />
+            </q-td>
+          </template>
+        </q-table>
+      </q-card-section>
 
-    <q-card-actions align="between" class="q-mt-md">
-      <q-btn label="Back" color="secondary" @click="goBack" />
-      <q-space />
-      <q-btn label="Place Order" color="positive" @click="goToCart" />
-    </q-card-actions>
+      <!-- Cart Section -->
+      <q-card-section>
+        <div class="text-subtitle1">Cart</div>
+        <q-list bordered>
+          <q-item v-for="(item, index) in purchaseItems" :key="index">
+            <q-item-section>
+              {{ item.name }} ({{ item.quantity }})
+            </q-item-section>
+            <q-item-section side>
+              <q-btn dense icon="delete" color="negative" @click="removeFromCart(index)" />
+            </q-item-section>
+          </q-item>
+        </q-list>
+      </q-card-section>
+
+      <!-- Submit Button -->
+      <q-card-actions align="right">
+        <q-btn label="Submit Purchase" color="positive" @click="submitPurchase" />
+      </q-card-actions>
+    </q-card>
   </q-page>
-  <OrderNavigation />
 </template>
 
-<script>
-import { reactive } from 'vue'
-import { useRouter } from 'vue-router'
-import OrderNavigation from 'components/OrderNavigation.vue'
-import { useCartStore } from 'stores/cartStore'
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
-const cartStore = useCartStore()
+const items = ref([])
+const quantities = ref({})
+const purchaseItems = ref([])
 
-export default {
-  name: 'ProductPage',
-  components: {
-    OrderNavigation,
-  },
+const customer = ref({
+  name: '',
+  email: '',
+  phone: ''
+})
 
-  data() {
-    return {
-      router: useRouter(),
-      cartStore,
-      products: reactive([
-        { name: 'Apple', price: 30, quantity: 1, added: false },
-        { name: 'Car', price: 500, quantity: 1, added: false },
-        { name: 'Toothpaste', price: 20, quantity: 1, added: false },
-        { name: 'pen', price: 20, quantity: 1, added: false },
-      ]),
-    }
-  },
+const columns = [
+  { name: 'id', label: 'ID', align: 'left', field: 'id' },
+  { name: 'name', label: 'Item Name', align: 'left', field: 'name' },
+  { name: 'type', label: 'Type', align: 'left', field: 'type' },
+  { name: 'stock', label: 'Stock', align: 'right', field: 'stock' },
+  { name: 'action', label: 'Quantity', align: 'center' }
+]
 
-  mounted() {
-    // Restore previously added items from the cart store
-    this.cartStore.cartItems.forEach((cartItem) => {
-      const product = this.products.find((p) => p.name === cartItem.name)
-      if (product) {
-        product.added = true
-        product.quantity = cartItem.quantity
-      }
-    })
-
-    // Scroll to last selected item (optional)
-    const selectedId = this.cartStore.lastSelectedItemId
-    if (selectedId) {
-      const element = document.getElementById(`item-${selectedId}`)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        element.classList.add('highlight')
-      }
-    }
-  },
-
-  methods: {
-    goToCart() {
-      this.router.push('/cart')
-    },
-    goBack() {
-      //this.cartStore.clearCart() //final check this
-      this.router.push('/')
-    },
-    addToCart(product) {
-      this.cartStore.addToCart({
-        name: product.name,
-        price: product.price,
-        quantity: product.quantity,
-      })
-      product.added = true
-    },
-    increaseQty(product) {
-      product.quantity++
-      this.cartStore.updateQuantity(product.name, product.quantity)
-    },
-    decreaseQty(product) {
-      if (product.quantity > 1) {
-        product.quantity--
-        this.cartStore.updateQuantity(product.name, product.quantity)
-      } else {
-        product.added = false
-        this.cartStore.removeFromCart(product.name)
-        product.quantity = 1
-      }
-    },
-  },
+const fetchItems = async () => {
+  const res = await axios.get('http://localhost:5000/api/items')
+  items.value = res.data
 }
+
+const addToCart = (item) => {
+  const quantity = quantities.value[item.id] || 1
+  if (quantity <= 0 || quantity > item.stock) {
+    alert('Invalid quantity')
+    return
+  }
+
+  const existing = purchaseItems.value.find(i => i.id === item.id)
+  if (existing) {
+    existing.quantity += quantity
+  } else {
+    purchaseItems.value.push({ ...item, quantity })
+  }
+  quantities.value[item.id] = 1
+}
+
+const removeFromCart = (index) => {
+  purchaseItems.value.splice(index, 1)
+}
+
+const submitPurchase = async () => {
+  // Basic validation
+  if (!customer.value.name || !customer.value.email || !customer.value.phone) {
+    alert('All customer fields are required')
+    return
+  }
+
+  if (!/.+@.+\..+/.test(customer.value.email)) {
+    alert('Invalid email format')
+    return
+  }
+
+  if (!/^\d{10}$/.test(customer.value.phone)) {
+    alert('Phone must be 10 digits')
+    return
+  }
+
+  if (purchaseItems.value.length === 0) {
+    alert('Cart is empty')
+    return
+  }
+
+  const payload = {
+    customer: customer.value,
+    cart: purchaseItems.value
+  }
+
+  console.log('Submitting:', payload)
+
+  try {
+    await axios.post('http://localhost:5000/api/purchase/submit', payload)
+    alert('Purchase submitted successfully!')
+    purchaseItems.value = []
+  } catch (err) {
+    console.error(err)
+    alert('Error submitting purchase')
+  }
+}
+
+onMounted(fetchItems)
 </script>

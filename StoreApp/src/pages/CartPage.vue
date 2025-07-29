@@ -1,95 +1,69 @@
 <template>
-  <q-page class="q-pa-md">
-    <div class="text-h5 q-mb-md">🛒 Cart Summary</div>
+  <q-page padding>
+    <q-form @submit.prevent="submitPurchase">
+      <q-card>
+        <q-card-section>
+          <div class="text-h6">New Purchase</div>
+        </q-card-section>
 
-    <q-table
-      :rows="cartStore.cartItems"
-      :columns="columns"
-      row-key="name"
-      flat
-      bordered
-    >
-      <!-- Combined column templates -->
-      <template v-slot:body="props">
-        <q-tr :props="props">
-          <q-td key="name" :props="props">{{ props.row.name }}</q-td>
-          <q-td key="quantity" :props="props">{{ props.row.quantity }}</q-td>
-          <q-td key="price" :props="props">₹{{ props.row.price }}</q-td>
-          <q-td key="total" :props="props">
-            ₹{{ (props.row.price * props.row.quantity).toFixed(2) }}
-          </q-td>
-          <q-td key="action" :props="props">
-            <q-btn
-              flat
-              dense
-              icon="delete"
-              color="negative"
-              @click="cartStore.removeFromCart(props.row.name)"
+        <q-card-section>
+          <div v-for="(item, index) in purchaseItems" :key="index" class="q-mb-sm">
+            <q-select
+              v-model="item.item_id"
+              :options="itemOptions"
+              label="Select Item"
+              option-label="name"
+              option-value="id"
+              emit-value
+              map-options
+              class="q-mb-sm"
             />
-          </q-td>
-        </q-tr>
-      </template>
-    </q-table>
+            <q-input
+              v-model="item.quantity"
+              type="number"
+              label="Quantity"
+              class="q-mb-sm"
+            />
+          </div>
+          <q-btn label="Add Another Item" @click="addItem" color="secondary" />
+        </q-card-section>
 
-    <q-card class="q-mt-md">
-      <div class="q-pa-md text-right">
-        <div class="text-subtitle1">Total Items: {{ totalItems }}</div>
-        <div class="text-subtitle1">Grand Total: ₹{{ totalPrice.toFixed(2) }}</div>
-      </div>
-    </q-card>
-
-    <q-card-actions align="between" class="q-mt-md">
-      <q-btn label=" < Back" color="primary" @click="goBack" />
-      <q-space />
-      <q-btn
-        label="Clear Cart"
-        color="negative"
-        @click="cartStore.clearCart()"
-        :disable="cartStore.cartItems.length === 0"
-      />
-    </q-card-actions>
+        <q-card-actions align="right">
+          <q-btn type="submit" label="Submit Purchase" color="primary" />
+        </q-card-actions>
+      </q-card>
+    </q-form>
   </q-page>
 </template>
 
+<script setup>
+import { ref, onMounted } from 'vue'
+import axios from 'axios'
 
-<script>
-import { defineComponent } from 'vue'
-import { useCartStore } from 'stores/cartStore'
+const itemOptions = ref([])
+const purchaseItems = ref([{ item_id: null, quantity: 1 }])
 
-export default defineComponent({
-  name: 'CartPage',
+const fetchItemOptions = async () => {
+  const res = await axios.get('http://localhost:5000/api/items')
+  itemOptions.value = res.data
+}
 
-  data() {
-    return {
-      columns: [
-        { name: 'name', label: 'Item Name', field: 'name', align: 'left' },
-        { name: 'quantity', label: 'Quantity', field: 'quantity', align: 'right' },
-        { name: 'price', label: 'Price (₹)', field: 'price', align: 'right' },
-        { name: 'total', label: 'Total (₹)', field: 'total', align: 'right' },
-        { name: 'action', label: 'Action', field: 'action', align: 'center' },
-      ],
-    }
-  },
+const addItem = () => {
+  purchaseItems.value.push({ item_id: null, quantity: 1 })
+}
 
-  computed: {
-    cartStore() {
-      return useCartStore()
-    },
-    totalItems() {
-      return this.cartStore.cartItems.reduce((sum, item) => sum + Number(item.quantity), 0)
-    },
-    totalPrice() {
-      return this.cartStore.cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
-    },
-  },
+const submitPurchase = async () => {
+  try {
+    await axios.post('http://localhost:5000/api/purchase/submit', {
+      items: purchaseItems.value
+    })
+    alert('Purchase submitted successfully!')
+    purchaseItems.value = [{ item_id: null, quantity: 1 }]
+  } catch (err) {
+    alert('Submission failed.',err)
+  }
+}
 
-  methods: {
-    goToCart() {
-      this.$router.push('/cart')
-    },
-    goBack() {
-      this.$router.back('/')
-    },
-  },
-})
+onMounted(fetchItemOptions)
 </script>
+
