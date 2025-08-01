@@ -54,7 +54,6 @@
 //   }
 // };
 
-
 const pool = require("../db");
 exports.submitPurchase = async (req, res) => {
   const { customer, cart } = req.body;
@@ -73,16 +72,16 @@ exports.submitPurchase = async (req, res) => {
     for (let item of cart) {
       // Insert into purchase_items
       await pool.query(
-        `INSERT INTO purchase_items (purchase_id, item_id, quantity)
-         VALUES ($1, $2, $3)`,
-        [purchaseId, item.id, item.quantity]
+        `INSERT INTO purchases (customer_name, customer_email, customer_phone)
+   VALUES ($1, $2, $3) RETURNING id`,
+        [customer.name, customer.email, customer.phone]
       );
 
       // Update stock
-      await pool.query(
-        `UPDATE items SET stock = stock - $1 WHERE id = $2`,
-        [item.quantity, item.id]
-      );
+      await pool.query(`UPDATE items SET stock = stock - $1 WHERE id = $2`, [
+        item.quantity,
+        item.id,
+      ]);
     }
 
     await pool.query("COMMIT");
