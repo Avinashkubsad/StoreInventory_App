@@ -66,4 +66,3 @@ const submitPurchase = async () => {
 
 onMounted(fetchItemOptions)
 </script>
-
