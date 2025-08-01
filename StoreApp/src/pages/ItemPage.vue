@@ -132,6 +132,7 @@ const submitPurchase = async () => {
     cart: purchaseItems.value
   }
 
+  
   console.log('Submitting:', payload)
 
   try {
